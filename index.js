@@ -9,7 +9,7 @@ const PINTEREST_TOKEN = process.env.PINTEREST_TOKEN;
 app.post('/mcp', async (req, res) => {
   const { method, params, id } = req.body || {};
 
-  // 1. Verificación e inicialización de Claude
+  // 1. Inicialización
   if (method === 'initialize') {
     return res.json({
       jsonrpc: '2.0',
@@ -26,7 +26,7 @@ app.post('/mcp', async (req, res) => {
     return res.status(200).end();
   }
 
-  // 2. Listar herramientas
+  // 2. Herramientas
   if (method === 'tools/list') {
     return res.json({
       jsonrpc: '2.0',
@@ -54,32 +54,50 @@ app.post('/mcp', async (req, res) => {
     });
   }
 
-  // 3. Ejecutar herramientas
+  // 3. Ejecución
   if (method === 'tools/call') {
     const { name, arguments: args } = params || {};
 
     if (name === 'obtener_tableros') {
-      const response = await fetch('https://api.pinterest.com/v5/boards', {
-        headers: { 'Authorization': `Bearer ${PINTEREST_TOKEN}` }
-      });
-      const data = await response.json();
-      return res.json({
-        jsonrpc: '2.0',
-        id,
-        result: { content: [{ type: 'text', text: JSON.stringify(data.items || []) }] }
-      });
+      try {
+        const response = await fetch('https://api.pinterest.com/v5/boards', {
+          headers: { 'Authorization': `Bearer ${PINTEREST_TOKEN}` }
+        });
+        const data = await response.json();
+        
+        // Retornamos el objeto 'data' completo para ver cualquier error de la API
+        return res.json({
+          jsonrpc: '2.0',
+          id,
+          result: { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] }
+        });
+      } catch (err) {
+        return res.json({
+          jsonrpc: '2.0',
+          id,
+          result: { content: [{ type: 'text', text: `Error del servidor: ${err.message}` }] }
+        });
+      }
     }
 
     if (name === 'obtener_pines') {
-      const response = await fetch(`https://api.pinterest.com/v5/boards/${args.board_id}/pins`, {
-        headers: { 'Authorization': `Bearer ${PINTEREST_TOKEN}` }
-      });
-      const data = await response.json();
-      return res.json({
-        jsonrpc: '2.0',
-        id,
-        result: { content: [{ type: 'text', text: JSON.stringify(data.items || []) }] }
-      });
+      try {
+        const response = await fetch(`https://api.pinterest.com/v5/boards/${args.board_id}/pins`, {
+          headers: { 'Authorization': `Bearer ${PINTEREST_TOKEN}` }
+        });
+        const data = await response.json();
+        return res.json({
+          jsonrpc: '2.0',
+          id,
+          result: { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] }
+        });
+      } catch (err) {
+        return res.json({
+          jsonrpc: '2.0',
+          id,
+          result: { content: [{ type: 'text', text: `Error del servidor: ${err.message}` }] }
+        });
+      }
     }
   }
 
