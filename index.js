@@ -6,11 +6,27 @@ app.use(express.json());
 
 const PINTEREST_TOKEN = process.env.PINTEREST_TOKEN;
 
-// Endpoint HTTP MCP para Claude
 app.post('/mcp', async (req, res) => {
-  const { method, params, id } = req.body;
+  const { method, params, id } = req.body || {};
 
-  // Listar herramientas disponibles
+  // 1. Verificación e inicialización de Claude
+  if (method === 'initialize') {
+    return res.json({
+      jsonrpc: '2.0',
+      id,
+      result: {
+        protocolVersion: '2024-11-05',
+        capabilities: { tools: {} },
+        serverInfo: { name: 'pinterest-mcp', version: '1.0.0' }
+      }
+    });
+  }
+
+  if (method === 'notifications/initialized') {
+    return res.status(200).end();
+  }
+
+  // 2. Listar herramientas
   if (method === 'tools/list') {
     return res.json({
       jsonrpc: '2.0',
@@ -38,9 +54,9 @@ app.post('/mcp', async (req, res) => {
     });
   }
 
-  // Ejecutar herramientas
+  // 3. Ejecutar herramientas
   if (method === 'tools/call') {
-    const { name, arguments: args } = params;
+    const { name, arguments: args } = params || {};
 
     if (name === 'obtener_tableros') {
       const response = await fetch('https://api.pinterest.com/v5/boards', {
@@ -70,5 +86,5 @@ app.post('/mcp', async (req, res) => {
   res.status(400).json({ jsonrpc: '2.0', id, error: { code: -32601, message: 'Método no encontrado' } });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`Servidor MCP escuchando en puerto ${PORT}`));
